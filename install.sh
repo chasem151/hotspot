@@ -1,59 +1,52 @@
+#!/bin/bash
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
 sudo systemctl enable hostapd
 sudo DEBIAN_FRONTEND=noninteractive apt install -y netfilter-persistent iptables-persistent
-sudo nano /etc/dhcpcd.conf
-interface br0
-static ip_address=10.0.0.82/24
-static routers=10.0.0.1
-static domain_name_servers=127.0.0.1
-sudo nano /etc/sysctl.d/
-	net.ipv4.tcp_syncookies=1
-	net.ipv4.ip_forward=1
+sudo cat "interface br0 \n
+static ip_address=10.0.0.82/24 \n
+static routers=10.0.0.1 \n
+static domain_name_servers=127.0.0.1 \n" >> /etc/dhcpcd.conf
+
+sudo cat "net.ipv4.tcp_syncookies=1 \n
+	net.ipv4.ip_forward=1 \n" >> /etc/sysctl.d/
 sudo sysctl -p /etc/sysctl.conf
 sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 sudo netfilter-persistent save
 sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
-interface=wlan0
-dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h # client DHCP addr
-domain=wlan
-address=/gw.wlan/192.168.4.1 # alias for the router
+sudo cat >> "interface=wlan0 \n
+dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h  \n 
+domain=wlan \n
+address=/gw.wlan/192.168.4.1 \n # alias for the router" >> .etc/dnsmasq.conf
 sudo rfkill unblock wlan
-sudo nano /etc/hostapd/hostapd.conf
-country_code=US
-interface=wlan0
-scan_ssid=1
-ssid=bband        
-hw_mode=g 
-channel=7
-macaddr_acl=0
-auth_algs=1
-ignore_broadcast_ssid=0
-wpa=2
-wpa_passphrase=botf-togO-nfs313
-wpa_key_mgmt=WPA-PSK
-wpa_pairwise=TKIP
-rsn_pairwise=CCMP
+sudo cat "country_code=US \n
+interface=wlan0 \n
+scan_ssid=1 \n
+ssid=bband \n        
+hw_mode=g \n
+channel=7 \n
+macaddr_acl=0 \n
+auth_algs=1 \n
+ignore_broadcast_ssid=0 \n
+wpa=2 \n
+wpa_passphrase=botf-togO-nfs313 \n
+wpa_key_mgmt=WPA-PSK \n
+wpa_pairwise=TKIP \n
+rsn_pairwise=CCMP \n" >> /etc/hostapd/hostapd.conf
 sudo systemctl reboot
 sudo usermod -aG group username
-sudo nano /etc/systemd/network/bridge-br0.netdev
-[NetDev]
-Name=br0
-Kind=bridge
-sudo nano /etc/systemd/network/br0-member-eth0.network
-[Match]
-Name=eth0
-[Network]
-Bridge=br0
+sudo cat "[NetDev] \n
+Name=br0 \n
+Kind=bridge \n" >> /etc/systemd/network/bridge-br0.netdev
+sudo cat "[Match] \n
+Name=eth0 \n
+[Network] \n
+Bridge=br0 \n" >> /etc/systemd/network/br0-member-eth0.network
 sudo systemctl enable systemd-networkd
-sudo nano /etc/dhcpcd.conf
-denyinterfaces wlan0 eth0
-interface br0
-sudo rfkill unblock wlan
+sudo cat "denyinterfaces wlan0 eth0 \n
+interface br0 \n
+sudo rfkill unblock wlan \n" >> /etc/dhcpcd.conf
 sudo curl -L https://install.pivpn.io | bash
-rename .ovpn to .conf
-mv .conf to /etc/ovpn
-edit /etc/default/openvpn to enable autostart
 sudo ufw reset
 sudo iptables -F
 sudo iptables -X
@@ -71,9 +64,8 @@ sudo ufw enable
 sudo ufw status verbose
 sudo ufw allow 51820
 sudo ufw allow 22
-sudo nano /etc/default/ufw
-DEFAULT_OUTPUT_POLICY="ACCEPT"
-DEFAULT_FORWARD_POLICY="ACCEPT"
+sudo cat "DEFAULT_OUTPUT_POLICY="ACCEPT" \n
+DEFAULT_FORWARD_POLICY="ACCEPT" \n" >> /etc/default/ufw
 sudo ufw disable && sudo ufw enable
 curl ipinfo.io/ip
 sudo nano /etc/openvpn/server.conf 
@@ -82,14 +74,13 @@ sudo iptables -t nat -A POSTROUTING -d 10.8.95.0 -p tcp --dport 51820 -j SNAT --
 sudo netfilter-persistent save
 sudo netfilter-persistent reload
 cd /etc/init.d/
-#!/bin/sh
+sudo nano ./firewall.sh
 sudo iptables -t nat -A POSTROUTING -s 10.8.95.0/24 -o eth0 -j MASQUERADE //The>
 sudo su -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
 sudo chmod 755 /etc/init.d/firewall.sh
 sudo chmod +x /etc/init.d/firewall.sh
 sudo update-rc.d firewall.sh defaults
 cd ~/ovpns
-sudo nano ./hostname.ovpn
-compress lz4 #
+sudo cat "compress lz4" >> ./hostname.ovpn
 sudo cp ./hostname.ovpn ./hostname.ovpn.conf
 sudo mv ./hostname.ovpn.conf /etc/ovpn/
