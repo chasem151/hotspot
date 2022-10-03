@@ -69,13 +69,13 @@ DEFAULT_FORWARD_POLICY="ACCEPT" \n" >> /etc/default/ufw
 sudo ufw disable && sudo ufw enable
 curl ipinfo.io/ip
 sudo nano /etc/openvpn/server.conf 
-sudo iptables -t nat -A PREROUTING -d 24.91.159.44 -p tcp --dport ***REMOVED*** -j DNAT --to-dest 10.8.95.0:***REMOVED***
-sudo iptables -t nat -A POSTROUTING -d 10.8.95.0 -p tcp --dport ***REMOVED*** -j SNAT --to-source 10.8.95.0
+sudo iptables -t nat -A PREROUTING -d 24.91..... -p tcp --dport ***REMOVED*** -j DNAT --to-dest 10.8...:***REMOVED***
+sudo iptables -t nat -A POSTROUTING -d 10.8... -p tcp --dport ***REMOVED*** -j SNAT --to-source 10.8...
 sudo netfilter-persistent save
 sudo netfilter-persistent reload
 cd /etc/init.d/
 sudo nano ./firewall.sh
-sudo iptables -t nat -A POSTROUTING -s 10.8.95.0/24 -o eth0 -j MASQUERADE //The>
+sudo iptables -t nat -A POSTROUTING -s 10..../24 -o eth0 -j MASQUERADE //The>
 sudo su -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
 sudo chmod 755 /etc/init.d/firewall.sh
 sudo chmod +x /etc/init.d/firewall.sh
