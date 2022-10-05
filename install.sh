@@ -19,12 +19,11 @@ dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h  \n
 domain=wlan \n
 address=/gw.wlan/192.168.4.1 \n # alias for the router" >> .etc/dnsmasq.conf
 sudo rfkill unblock wlan
-sudo cat "country_code=US \n
-interface=wlan0 \n
-scan_ssid=1 \n
-ssid=bband \n        
-hw_mode=g \n
-channel=7 \n
+sudo cat "interface=wlan0 \n
+country_code=US \n
+ssid= \n
+hw_mode=a \n
+channel=153 \n
 macaddr_acl=0 \n
 auth_algs=1 \n
 ignore_broadcast_ssid=0 \n
@@ -32,7 +31,7 @@ wpa=2 \n
 wpa_passphrase= \n
 wpa_key_mgmt=WPA-PSK \n
 wpa_pairwise=TKIP \n
-rsn_pairwise=CCMP \n" >> /etc/hostapd/hostapd.conf
+rsn_pairwise=CCMP" >> /etc/hostapd/hostapd.conf
 sudo systemctl reboot
 sudo usermod -aG group username
 sudo cat "[NetDev] \n
@@ -46,7 +45,7 @@ sudo systemctl enable systemd-networkd
 sudo cat "denyinterfaces wlan0 eth0 \n
 interface br0 \n
 sudo rfkill unblock wlan \n" >> /etc/dhcpcd.conf
-sudo curl -L https://install.pivpn.io | bash
+sudo curl -L https://install.pivpn.io | bash # set dns to Google, I used duckdns.org which has a instructions on the site to setup dynamic dns BEFORE running this command
 sudo ufw reset
 sudo iptables -F
 sudo iptables -X
@@ -68,16 +67,24 @@ sudo cat "DEFAULT_OUTPUT_POLICY="ACCEPT" \n
 DEFAULT_FORWARD_POLICY="ACCEPT" \n" >> /etc/default/ufw
 sudo ufw disable && sudo ufw enable
 curl ipinfo.io/ip
-sudo nano /etc/openvpn/server.conf 
-sudo iptables -t nat -A PREROUTING -d 24.91..... -p tcp --dport 51820 -j DNAT --to-dest 10.8...:51820
-sudo iptables -t nat -A POSTROUTING -d 10.8... -p tcp --dport 51820 -j SNAT --to-source 10.8...
+sudo vi /etc/sysctl.d/routed-ap.conf
+net.ipv4.ip_forward=1
+sudo service openvpn start
+sudo iptables -A FORWARD -i tun0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+$ sudo iptables -A FORWARD -i eth0 -o tun0 -j ACCEPT
+sudo iptables -A FORWARD -i tun0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i wlan0 -o tun0 -j ACCEPT
+sudo iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
+sudo iptables -t nat -A PREROUTING -d DYNAMIC_DNS_IP_via_curl_ipinfo.io/ip -p tcp --dport 51820 -j DNAT --to-dest IP_in_/etc/openvpn/server.conf:51820
+sudo iptables -t nat -A POSTROUTING -d IP_in_/etc/openvpn/server.conf -p tcp --dport 51820 -j SNAT --to-source IP_in_/etc/openvpn/server.conf
 sudo netfilter-persistent save
 sudo netfilter-persistent reload
 cd /etc/init.d/
 sudo nano ./firewall.sh
-sudo iptables -t nat -A POSTROUTING -s 10..../24 -o eth0 -j MASQUERADE //The>
+sudo iptables -t nat -A POSTROUTING -s IP_in_/etc/openvpn/server.conf/24 -o eth0 -j MASQUERADE
+sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
 sudo su -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
-sudo chmod 755 /etc/init.d/firewall.sh
+sudo chmod 700 /etc/init.d/firewall.sh
 sudo chmod +x /etc/init.d/firewall.sh
 sudo update-rc.d firewall.sh defaults
 cd ~/ovpns
