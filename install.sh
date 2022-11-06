@@ -8,7 +8,7 @@ sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we
 parted /dev/sda resizepart 2 20G # verification of the resize of partition slot 2
 gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
 #make sure to save!@
-sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
+sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools gparted
 sudo systemctl reboot
 cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 
 #I recommend setting a password
