@@ -1,21 +1,38 @@
 #!/bin/bash
-# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to encrypt the root partition (mine is sda bc my micro SD card adapter plugs in to my Linux machine over USB.. something about UART? I coded USB transmission sofware circuits once I swear.
+# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to 
+#encrypt the root partition (mine is sda bc my micro SD card adapter plugs in to my Linux machine over USB.. something about UART? 
+#Icoded USB transmission sofware circuits once I swear.
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted
 parted /dev/sda resizepart 2 20G # verification of the resize of partition slot 2
-gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), make sure to save!@
+gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
+#make sure to save!@
 sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
 sudo systemctl reboot
-cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 # recommend setting a password
-echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped these commands bc my rpi keeps dying with the power draw of a light-up keyboard and dies every time over ssh before I could enter the set password
+cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 
+#Irecommend setting a password
+echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped these commands bc my rpi keeps dying 
+# with the power draw of a light-up keyboard and dies every time over ssh before I could enter the set password
 sudo mkfs.ext4 -L root /dev/mapper/mmcblk0p3 # create new file system with root label
 sudo mount /dev/mapper/mmcblk0p3 /mnt # mount the partition to /mnt
 sudo blkid && sudo lsblk # check out the partition structure to see that it updates
 sudo echo "initramfs initramfs.gz followkernel" >> /boot/config.txt # add to EOF after [all]
 sudo nano /boot/cmdline.txt # edit the root=/ default value and separate cryptdevice= by a space on both sides.
 root=/dev/mapper/crypt cryptdevice=/dev/mmcblk0p3:crypt ... # add/edit on the existing one contiguous line with one (1) space on all sides 
-sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs to be unlocked at the root stage (root/resume devices or ones with explicit initramfs flag in /etc/crypttab)
+sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs 
+# to be unlocked at the root stage (root/resume devices or ones with explicit initramfs flag in /etc/crypttab)
+sudo echo "crypt	/dev/mmcblk0p3	 none	luks" >> /etc/crypttab
+sudoedit /etc/fstab # this file is VERY SENSITIVE.. be careful here or you might lose all your progress and 
+# the rpi box will not boot/be recoverable without quantum cracking hashes.. make sure the spacing matches the existing symlinks/integers
+# I chose to go with the default format and mark the path of the encrypted /dev/mapper directory created by PARTUUID="", also not sure why there is by
+# default 12 spaces between /boot and vfat, and 16 spaces between / and ext4, so I put 20 spaces between PARTUUID="" and its /.
+# I matched the rest, with 5 spaces between file system type (vfat/ext4) and 3 spaces between defaults and the first integer, 
+# 8 spaces between the first and second integers.
+# ^^ CHANGES: root partition to point @the encrypted partition in the 4th row with data in the file
+# comment out old root partition so it can serve as a fallback if there are issues
+# use UIDs gathered by "sudo blkid"to match the existing format for adding the /dev/mapper 
+# encrypted partition with a proper symlink instead of absolute path
 # ON LOCAL MACHINE
 ssh-keygen -t rsa -b 4096 # set password on this (optional)
 ***REMOVED*** ./key.pub hostname@static_IP_of_rpi:~/ # ssh into the rpi box now..
@@ -79,7 +96,8 @@ sudo systemctl enable systemd-networkd
 sudo echo "denyinterfaces wlan0 eth0 \n
 interface br0 \n
 sudo rfkill unblock wlan \n" >> /etc/dhcpcd.conf
-sudo curl -L https://install.pivpn.io | bash # set dns to Google, I used duckdns.org which has a instructions on the site to setup dynamic dns BEFORE running this command
+sudo curl -L https://install.pivpn.io | bash # set dns to Google, I used duckdns.org which has a instructions on the site to setup 
+#dynamic dns BEFORE running this command
 sudo ufw reset
 sudo iptables -F
 sudo iptables -X
