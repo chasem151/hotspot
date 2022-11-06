@@ -3,7 +3,7 @@
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted
-parted /dev/sda resizepart 2 20G
+parted /dev/sda resizepart 2 20G # verification of the resize of partition slot 2
 gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), make sure to save!@
 sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
 sudo systemctl reboot
