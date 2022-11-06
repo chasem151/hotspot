@@ -1,20 +1,13 @@
 #!/bin/bash
 # Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals
-sudo umount /dev/sda1
-sudo e2fsck -f /dev/sda1
-sudo resize2fs /dev/sda1 7G
-sudo fdisk /dev/sda
-p
-d
-1
-n
-1
-t
-b
-p
-w
-# repeat for /dev/sda2 I resized mine to 20G given my micro SD card is 60Gb, after deleting partition 2 then creating it anew, run t, then 
-# 83 instead of b to make partition /dev/sda2 type Linux
+sudo umount /dev/sda1 && sudo umount /dev/sda2
+sudo e2fsck -f /dev/sda2
+sudo resize2fs /dev/sda1 20G
+parted /dev/sda resizepart 2 20G
+gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), make sure to save!@
+sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
+sudo systemctl reboot
+cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3
 # end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
