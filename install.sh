@@ -1,4 +1,18 @@
 #!/bin/bash
+# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals
+sudo umount /dev/sda1
+sudo e2fsck -f /dev/sda1
+sudo resize2fs /dev/sda1 7G
+sudo fdisk /dev/sda
+p
+d
+1
+n
+1
+p
+w
+# repeat for /dev/sda2 I resized mine to 20G given my micro SD card is 60Gb
+# end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
 sudo systemctl enable hostapd
@@ -91,3 +105,11 @@ cd ~/ovpns
 sudo cat "compress lz4" >> ./hostname.ovpn
 sudo cp ./hostname.ovpn ./hostname.ovpn.conf
 sudo mv ./hostname.ovpn.conf /etc/ovpn/
+sudo nano /etc/fstab
+/dev/mmcblk0p1 /boot
+/dev/sda /
+sudo nano /boot/cmdline.txt
+root=/dev/sda1
+sudo reboot
+sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
+sudo cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/sda4
