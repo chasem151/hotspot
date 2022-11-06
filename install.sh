@@ -11,44 +11,72 @@ gparted # use the unallocated space to create a new unallocated partition of equ
 sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
 sudo systemctl reboot
 cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 
-#Irecommend setting a password
-echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped these commands bc my rpi keeps dying 
+#I recommend setting a password
+echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 cryptsetup - # piped these commands bc my rpi keeps dying 
 # with the power draw of a light-up keyboard and dies every time over ssh before I could enter the set password
-sudo mkfs.ext4 -L root /dev/mapper/mmcblk0p3 # create new file system with root label
-sudo mount /dev/mapper/mmcblk0p3 /mnt # mount the partition to /mnt
+sudo mkfs.ext4 -L root /dev/mapper/cryptsetup # create new file system with root label, this will create symlink /dev/mapper/crypt as well
+sudo mount /dev/mapper/cryptsetup /mnt # mount the partition to /mnt
+sudo nano /mnt/config.txt
+# uncomment/add safe_mode_gpio=4, max_usb_current=1, dtparam=act_led_trigger=heartbeat, dtparam=pwr_led_trigger=panic, disable_audio_dither=1
+# dtparam=watchdog=on, dtparam=spi=on, dtparam=i2c_arm=off, enable_uart=0, start_x=0, boot_delay=100, dtoverlay=pi3-disable-bt ahhhh heres the UART
 sudo blkid && sudo lsblk # check out the partition structure to see that it updates
-sudo echo "initramfs initramfs.gz followkernel" >> /boot/config.txt # add to EOF after [all]
-sudo nano /boot/cmdline.txt # edit the root=/ default value and separate cryptdevice= by a space on both sides.
+sudo echo "initramfs initramfs.gz followkernel" >> /mnt/config.txt # add to EOF after [all]
+sudo nano /mnt/cmdline.txt # edit the root=/ default value and separate cryptdevice= by a space on both sides.
 root=/dev/mapper/crypt cryptdevice=/dev/mmcblk0p3:crypt ... # add/edit on the existing one contiguous line with one (1) space on all sides 
-sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs 
 # to be unlocked at the root stage (root/resume devices or ones with explicit initramfs flag in /etc/crypttab)
-sudo echo "crypt	/dev/mmcblk0p3	 none	luks" >> /etc/crypttab
-sudoedit /etc/fstab # this file is VERY SENSITIVE.. be careful here or you might lose all your progress and 
-# the rpi box will not boot/be recoverable without quantum cracking hashes.. make sure the spacing matches the existing symlinks/integers
-# I chose to go with the default format and mark the path of the encrypted /dev/mapper directory created by PARTUUID="", also not sure why there is by
-# default 12 spaces between /boot and vfat, and 16 spaces between / and ext4, so I put 20 spaces between PARTUUID="" and its /.
-# I matched the rest, with 5 spaces between file system type (vfat/ext4) and 3 spaces between defaults and the first integer, 
-# 8 spaces between the first and second integers.
-# ^^ CHANGES: root partition to point @the encrypted partition in the 4th row with data in the file
-# comment out old root partition so it can serve as a fallback if there are issues
-# use UIDs gathered by "sudo blkid"to match the existing format for adding the /dev/mapper 
-# encrypted partition with a proper symlink instead of absolute path
-# ON LOCAL MACHINE
+sudoedit /etc/crypttab
+"crypt	/dev/disk/by-uuid/5e8f28f3-bad1-47dd-b7be-5df77f2f1d82	 none	luks" # you should want to copy this spacing
+sudoedit /etc/fstab # this file is VERY SENSITIVE (as is the one directly above).. be careful here or you might lose all your progress and 
+# the rpi box will not boot/be recoverable without quantum cracking hashes if you type wrong.. make sure the spacing matches the existing symlinks/integers
+# I chose to go with the default format and mark the path of the encrypted /dev/mapper directory created by PARTUUID="", 
+# second row: default 12 spaces between /boot and vfat, and third row: 16 spaces between / and ext4, so I put 20 spaces between /dev/mapper and its /,
+# which signifies a rootfs slot. I matched the rest of the existing spacing, with 5 spaces between file system type (vfat/ext4) and defaults,
+# 3 spaces between defaults and the first integer, 8 spaces between the first and second integers.
+# OR ignore my harebrained spacing calculations and just align everything vertically where it might not matter how many spaces btwn entries
+# ^^ CHANGES: add root partition to point @the encrypted partition as the 4th row with data in the file (first set of chars is symlink UUID=UUID for
+# dev/mapper/crypt, comment out old root partition so it can serve as a fallback if there are issues
+# add "defaults, noatime" to end of the encrypted rootfs line before the integers.. still not sure what this does but its the default for the other rootfs
+# use UUID="" gathered by "sudo blkid"to match the existing format for using PARTUUIDs, comment out existing root partition.
+# DON'T USE ABSOLUTE PATH, USE UUID for /dev/mapper/crypt BC UUID IS ALSO A SYMLINK LIKE PARTUUID, while an absolute path is not the same.
+# Also, at the bottom of the file:
+tmpfs /var/tmp tmpfs nodev,nosuid,noatime 0 0 # these lines increase the lifespan of the SD card, something about swap/this functions as RAM/a buffer
+tmpfs /tmp tmpfs defaults,noatime,nosuid 0 0
+# CTRL+X+ENTER+ENTER
+sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs 
+sudo mkinitramfs -o /mnt/initramfs.gz
+sudo lsinitramfs /mnt/initramfs.gz | grep -P "sbin/[cryptsetup|resize2fs|fdisk|dumpe2fs|expect]" # no idea how this much piping is helpful, v verbose
+sudo lsinitramfs /mnt/initramfs.gz | grep cryptsetup
+# clone current sys to encrypted partition
+sudo rsync -avhPHAXx --progress --exclude={/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found} / /mnt/
+# now, we are done encrypting SSD/HDD! unmount the encrypted partition and reboot
+# in the inintramfs prompt:
+cryptsetup luksOpen /dev/mmcblk0p3 crypt # mount encrypted partition
+exit # then exit the initramfs shell
+# after boot:
+sudo mkinitramfs -o /boot/initramfs.gz
+# we can now delete the unencrypted partition!!
+sudo fdisk /dev/mmcblk0
+d
+2
+w
+sudo sync
+sudo reboot
+# on your non Rpi preferably Linux/macos machine:
 ssh-keygen -t rsa -b 4096 # set password on this (optional)
 scp ./key.pub hostname@static_IP_of_rpi:~/ # ssh into the rpi box now..
 mkdir -p .ssh
 mv key.pub .ssh/ && cd .ssh
 cat key.pub >> authorized_keys
 sudo nano /etc/ssh/sshd_config
-Port xx # I recommend uncommenting this and changing the port # bc bots scrape the internet for devices @port 22 first
+Port xx # highly recommend uncommenting this and changing the port # bc bots scrape the internet for devices @port 22, bots used to be 82% of web traffic
 PermitRootLogin no
 PubKeyAuthentication yes
 AuthorizedKeysFile      .ssh/authorized_keys .ssh/authorized_keys2
 PasswordAuthentication no # this one is named stupidly, it allows **** as you type passwords instead of displaying plain psk characters as text
 ChallengeResponseAuthentication no
 CTRL+X+ENTER+ENTER
-rm -rf key.pub
 sudo systemctl restart sshd
+rm -rf key.pub
 # end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
