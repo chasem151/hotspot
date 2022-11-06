@@ -9,9 +9,11 @@ d
 1
 n
 1
+t
+b
 p
 w
-# repeat for /dev/sda2 I resized mine to 20G given my micro SD card is 60Gb
+# repeat for /dev/sda2 I resized mine to 20G given my micro SD card is 60Gb, after deleting partition 2 then creating it anew, run t, then 83 instead of b to make it type Linux
 # end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
