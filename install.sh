@@ -33,23 +33,23 @@ sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
 sudo systemctl enable hostapd
 sudo DEBIAN_FRONTEND=noninteractive apt install -y netfilter-persistent iptables-persistent
-sudo cat "interface br0 \n
+sudo echo "interface br0 \n
 static ip_address=10.0.0.82/24 \n
 static routers=10.0.0.1 \n
 static domain_name_servers=127.0.0.1 \n" >> /etc/dhcpcd.conf
 
-sudo cat "net.ipv4.tcp_syncookies=1 \n
+sudo echo "net.ipv4.tcp_syncookies=1 \n
 	net.ipv4.ip_forward=1 \n" >> /etc/sysctl.d/
 sudo sysctl -p /etc/sysctl.conf
 sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 sudo netfilter-persistent save
 sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
-sudo cat >> "interface=wlan0 \n
+sudo echo >> "interface=wlan0 \n
 dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h  \n 
 domain=wlan \n
 address=/gw.wlan/192.168.4.1 \n # alias for the router" >> .etc/dnsmasq.conf
 sudo rfkill unblock wlan
-sudo cat "interface=wlan0 \n
+sudo echo "interface=wlan0 \n
 country_code=US \n
 ssid= \n
 hw_mode=a \n
@@ -64,15 +64,15 @@ wpa_pairwise=TKIP \n
 rsn_pairwise=CCMP" >> /etc/hostapd/hostapd.conf
 sudo systemctl reboot
 sudo usermod -aG group username
-sudo cat "[NetDev] \n
+sudo echo "[NetDev] \n
 Name=br0 \n
 Kind=bridge \n" >> /etc/systemd/network/bridge-br0.netdev
-sudo cat "[Match] \n
+sudo echo "[Match] \n
 Name=eth0 \n
 [Network] \n
 Bridge=br0 \n" >> /etc/systemd/network/br0-member-eth0.network
 sudo systemctl enable systemd-networkd
-sudo cat "denyinterfaces wlan0 eth0 \n
+sudo echo "denyinterfaces wlan0 eth0 \n
 interface br0 \n
 sudo rfkill unblock wlan \n" >> /etc/dhcpcd.conf
 sudo curl -L https://install.pivpn.io | bash # set dns to Google, I used duckdns.org which has a instructions on the site to setup dynamic dns BEFORE running this command
@@ -93,7 +93,7 @@ sudo ufw enable
 sudo ufw status verbose
 sudo ufw allow ***REMOVED***
 sudo ufw allow ***REMOVED***
-sudo cat "DEFAULT_OUTPUT_POLICY="ACCEPT" \n
+sudo echo "DEFAULT_OUTPUT_POLICY="ACCEPT" \n
 DEFAULT_FORWARD_POLICY="ACCEPT" \n" >> /etc/default/ufw
 sudo ufw disable && sudo ufw enable
 curl ipinfo.io/ip
@@ -121,4 +121,3 @@ cd ~/ovpns
 sudo cat "compress lz4" >> ./hostname.ovpn
 sudo cp ./hostname.ovpn ./hostname.ovpn.conf
 sudo mv ./hostname.ovpn.conf /etc/ovpn/
-sudo nano /etc/fstab
