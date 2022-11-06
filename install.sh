@@ -7,7 +7,11 @@ parted /dev/sda resizepart 2 20G
 gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), make sure to save!@
 sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
 sudo systemctl reboot
-cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3
+cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 # recommend setting a password
+echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped these commands bc my rpi keeps dying with the power draw of a light-up keyboard and dies every time over ssh before I could enter the set password
+sudo mkfs.ext4 -L root /dev/mapper/mmcblk0p3 # create new file system with root label
+sudo mount /dev/mapper/mmcblk0p3 /mnt # mount the partition to /mnt
+sudo blkid && sudo lsblk # check out the partition structure to see that it updates
 # end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
