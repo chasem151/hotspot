@@ -12,6 +12,10 @@ echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped th
 sudo mkfs.ext4 -L root /dev/mapper/mmcblk0p3 # create new file system with root label
 sudo mount /dev/mapper/mmcblk0p3 /mnt # mount the partition to /mnt
 sudo blkid && sudo lsblk # check out the partition structure to see that it updates
+sudo echo "initramfs initramfs.gz followkernel" >> /boot/config.txt # add to EOF after [all]
+sudo nano /boot/cmdline.txt # edit the root=/ default value and separate cryptdevice= by a space on both sides.
+root=/dev/mapper/crypt cryptdevice=/dev/mmcblk0p3:crypt ... # add/edit on the existing one contiguous line with one (1) space on all sides 
+sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs to be unlocked at the root stage (root/resume devices or ones with explicit initramfs flag in /etc/crypttab)
 # ON LOCAL MACHINE
 ssh-keygen -t rsa -b 4096 # set password on this (optional)
 scp ./key.pub hostname@static_IP_of_rpi:~/ # ssh into the rpi box now..
