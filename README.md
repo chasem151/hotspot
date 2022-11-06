@@ -1,3 +1,3 @@
 # hotspot
 ## Home-made raspberry pi network repeater which bypasses Xfinity's double NAT default network configuration.
-Get user-permissions on install.sh and let the commands run by executing the script. IPs might need to be changed based on virtual address (mine is 24....) and the link-local address of the raspberry pi (mine is 10.8....)
+Run the commands one by one in the script. IPs might need to be changed based on virtual address and the link-local address of the raspberry pi. These commands do not work out-of the box, pasting the given text after each cat "" command into each file listed after >> will 100% work. Having your configuration match mine unless you are flashing the Raspberry pi on a different virtual machine (mine is Debian 11 Bullseye), or for a different microcontroller processor architecture is not tested.
