@@ -1,5 +1,5 @@
 #!/bin/bash
-# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to encrypt the root partition
+# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to encrypt the root partition (mine is sda bc my micro SD card adapter plugs in to my Linux machine over USB.. something about UART? I coded USB transmission sofware circuits once I swear.
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted
