@@ -102,10 +102,3 @@ sudo cat "compress lz4" >> ./hostname.ovpn
 sudo cp ./hostname.ovpn ./hostname.ovpn.conf
 sudo mv ./hostname.ovpn.conf /etc/ovpn/
 sudo nano /etc/fstab
-/dev/mmcblk0p1 /boot
-/dev/sda /
-sudo nano /boot/cmdline.txt
-root=/dev/sda1
-sudo reboot
-sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools
-sudo cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/sda4
