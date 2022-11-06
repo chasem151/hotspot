@@ -1,5 +1,5 @@
 #!/bin/bash
-# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals
+# Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to encrypt the root partition
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted
@@ -12,6 +12,22 @@ echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 mmcblk0p3 - # piped th
 sudo mkfs.ext4 -L root /dev/mapper/mmcblk0p3 # create new file system with root label
 sudo mount /dev/mapper/mmcblk0p3 /mnt # mount the partition to /mnt
 sudo blkid && sudo lsblk # check out the partition structure to see that it updates
+# ON LOCAL MACHINE
+ssh-keygen -t rsa -b 4096 # set password on this (optional)
+***REMOVED*** ./key.pub hostname@static_IP_of_rpi:~/ # ssh into the rpi box now..
+mkdir -p .ssh
+mv key.pub .ssh/ && cd .ssh
+cat key.pub >> authorized_keys
+sudo nano /etc/ssh/sshd_config
+Port xx # I recommend uncommenting this and changing the port # bc bots scrape the internet for devices @port ***REMOVED*** first
+PermitRootLogin no
+PubKeyAuthentication yes
+AuthorizedKeysFile      .ssh/authorized_keys .ssh/authorized_keys2
+PasswordAuthentication no # this one is named stupidly, it allows **** as you type passwords instead of displaying plain psk characters as text
+ChallengeResponseAuthentication no
+CTRL+X+ENTER+ENTER
+rm -rf key.pub
+sudo systemctl restart sshd
 # end starter operations, insert the micro SD into the pi
 sudo apt install hostapd dnsmasq
 sudo systemctl unmask hostapd
