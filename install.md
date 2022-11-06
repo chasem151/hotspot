@@ -5,11 +5,16 @@
 # consistently functional. THEN, you can install the OS with desktop GUI (this is important if your storage media/this process fails and you 
 # find yourself coming back to the beginning of this guide, it seems initramfs really likes to hang around.
 # to erase a /dev media file system, quickie way: wipefs -a <target device i.e. /dev/sda1>, robust, complete wipe: cat /dev/zero | [wcs](https://github.com/chasem151/hotspot/blob/master/wcs.c) > *target device*
+```
 sudo su
 sudo umount /dev/sda1 && sudo umount /dev/sda2
-sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
-sudo resize2fs /dev/sda2 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted (later problem)
-parted /dev/sda resizepart 2 20G # verification of the resize of partition slot 2
+sudo e2fsck -f /dev/sda2 
+# forces sys to check that memory is contiguous
+sudo resize2fs /dev/sda2 20G 
+# I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted (later problem)
+parted /dev/sda resizepart 2 20G 
+# verification of the resize of partition slot 2
+resize2fs /dev/sda2
 sudo fdisk /dev/sda
 d
 1
@@ -32,27 +37,36 @@ sudo wipefs -a /dev/sda1 && sudo wipefs -a /dev/sda2
 sudo cat /dev/zero | ./wcs > /dev/sda1
 sudo cat /dev/zero | ./wcs > /dev/sda2
 sudo lsblk # verify the drives have the amount of memory assigned to them
-gparted # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
+gparted 
+# use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
 #make sure to save!@
-sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools gparted
+sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools gparted # dependecy programs
 sudo systemctl reboot
 cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 
-#I recommend setting a password
-echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 cryptsetup - # piped these commands bc my rpi keeps dying 
+# I strongly recommend setting a password
+echo "password" | sudo cryptsetup luksOpen /dev/mmcblk0p3 cryptsetup - 
+# piped these commands bc my rpi keeps dying with the power draw of either ssh (ethernet on) or ethernet on and keyboard connected to pi on
 # with the power draw of a light-up keyboard and dies every time over ssh before I could enter the set password
-sudo mkfs.ext4 -L root /dev/mapper/cryptsetup # create new file system with root label, this will create symlink /dev/mapper/crypt as well
-sudo mount /dev/mapper/cryptsetup /mnt # mount the partition to /mnt
+sudo mkfs.ext4 -L root /dev/mapper/cryptsetup 
+# create new file system with root label, this will create symlink /dev/mapper/crypt as well
+sudo mount /dev/mapper/cryptsetup /mnt 
+# mount the partition to /mnt
 sudo nano /mnt/config.txt
 # uncomment/add safe_mode_gpio=4, max_usb_current=1, dtparam=act_led_trigger=heartbeat, dtparam=pwr_led_trigger=panic, disable_audio_dither=1
 # dtparam=watchdog=on, dtparam=spi=on, dtparam=i2c_arm=off, enable_uart=0, start_x=0, boot_delay=100, dtoverlay=pi3-disable-bt ahhhh heres the UART
-sudo blkid && sudo lsblk # check out the partition structure to see that it updates
-sudo echo "initramfs initramfs.gz followkernel" >> /mnt/config.txt # add to EOF after [all]
+sudo blkid && sudo lsblk 
+# check out the partition structure to see that it updates
+sudo echo "initramfs initramfs.gz followkernel" >> /mnt/config.txt 
+# add to EOF after [all]
 sudo nano /mnt/cmdline.txt # edit the root=/ default value and separate cryptdevice= by a space on both sides.
-root=/dev/mapper/crypt cryptdevice=/dev/mmcblk0p3:crypt ... # add/edit on the existing one contiguous line with one (1) space on all sides 
+root=/dev/mapper/crypt cryptdevice=/dev/mmcblk0p3:crypt  
+# add/edit on the existing one contiguous line with one (1) space on all sides 
 # to be unlocked at the root stage (root/resume devices or ones with explicit initramfs flag in /etc/crypttab)
 sudoedit /etc/crypttab
-"crypt	/dev/disk/by-uuid/5e8f28f3-bad1-47dd-b7be-5df77f2f1d82	 none	luks" # you should want to copy this spacing
-sudoedit /etc/fstab # this file is VERY SENSITIVE (as is the one directly above).. be careful here or you might lose all your progress and 
+"crypt	/dev/disk/by-uuid/5e8f28f3-bad1-47dd-b7be-5df77f2f1d82	 none	luks" 
+# you probably want to copy this spacing
+sudoedit /etc/fstab 
+# this file is VERY SENSITIVE (as is the one directly above).. be careful here or you might lose all your progress and 
 # the rpi box will not boot/be recoverable without quantum cracking hashes if you type wrong.. make sure the spacing matches the existing symlinks/integers
 # I chose to go with the default format and mark the path of the encrypted /dev/mapper directory created by PARTUUID="", 
 # second row: default 12 spaces between /boot and vfat, and third row: 16 spaces between / and ext4, so I put 20 spaces between /dev/mapper and its /,
@@ -68,15 +82,21 @@ sudoedit /etc/fstab # this file is VERY SENSITIVE (as is the one directly above)
 tmpfs /var/tmp tmpfs nodev,nosuid,noatime 0 0 # these lines increase the lifespan of the SD card, something about swap/this functions as RAM/a buffer
 tmpfs /tmp tmpfs defaults,noatime,nosuid 0 0
 # CTRL+X+ENTER+ENTER
-sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook # this file only starts existing when a device needs 
+sudo echo "CRYPTSETUP=y" >> /etc/cryptsetup-initramfs/conf-hook 
+# this file only starts existing when a device needs 
 sudo mkinitramfs -o /mnt/initramfs.gz
-sudo lsinitramfs /mnt/initramfs.gz | grep -P "sbin/[cryptsetup|resize2fs|fdisk|dumpe2fs|expect]" # no idea how this much piping is helpful, v verbose
+sudo lsinitramfs /mnt/initramfs.gz | grep -P "sbin/[cryptsetup|resize2fs|fdisk|dumpe2fs|expect]" 
+# no idea how this much piping is helpful, v verbose
 sudo lsinitramfs /mnt/initramfs.gz | grep cryptsetup
 # clone current sys to encrypted partition
-sudo rsync -avhPHAXx --progress --exclude={/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found} / /mnt/
+sudo rsync -avhPHAXx --progress --exclude=
+{/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found} / /mnt/
 # now, we are done encrypting SSD/HDD! unmount the encrypted partition and reboot
+sudo umount /dev/mmcblk0p3
+sudo reboot
 # in the inintramfs prompt:
-cryptsetup luksOpen /dev/mmcblk0p3 crypt # mount encrypted partition
+cryptsetup luksOpen /dev/mmcblk0p3 crypt 
+# mount encrypted partition
 exit # then exit the initramfs shell
 # after boot:
 sudo mkinitramfs -o /boot/initramfs.gz
@@ -94,11 +114,13 @@ mkdir -p .ssh
 mv key.pub .ssh/ && cd .ssh
 cat key.pub >> authorized_keys
 sudo nano /etc/ssh/sshd_config
-Port xx # highly recommend uncommenting this and changing the port # bc bots scrape the internet for devices @port ***REMOVED***, bots used to be 82% of web traffic
+Port xx # highly recommend uncommenting this and changing the port 
+# bc bots scrape the internet for devices @port ***REMOVED***, bots used to be 82% of web traffic
 PermitRootLogin no
 PubKeyAuthentication yes
 AuthorizedKeysFile      .ssh/authorized_keys .ssh/authorized_keys2
-PasswordAuthentication no # this one is named stupidly, it allows **** as you type passwords instead of displaying plain psk characters as text
+PasswordAuthentication no 
+# this one is named stupidly, it allows **** as you type passwords instead of displaying plain psk characters as text
 ChallengeResponseAuthentication no
 CTRL+X+ENTER+ENTER
 sudo systemctl restart sshd
@@ -150,7 +172,8 @@ sudo systemctl enable systemd-networkd
 sudo echo "denyinterfaces wlan0 eth0 \n
 interface br0 \n
 sudo rfkill unblock wlan \n" >> /etc/dhcpcd.conf
-sudo curl -L https://install.pivpn.io | bash # set dns to Google, I used duckdns.org which has a instructions on the site to setup 
+sudo curl -L https://install.pivpn.io | bash 
+# set dns to Google, I used duckdns.org which has a instructions on the site to setup 
 #dynamic dns BEFORE running this command
 sudo ufw reset
 sudo iptables -F
@@ -197,3 +220,4 @@ cd ~/ovpns
 sudo cat "compress lz4" >> ./hostname.ovpn
 sudo cp ./hostname.ovpn ./hostname.ovpn.conf
 sudo mv ./hostname.ovpn.conf /etc/ovpn/
+```
