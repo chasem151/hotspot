@@ -5,6 +5,22 @@
 # consistently functional. THEN, you can install the OS with desktop GUI (this is important if your storage media/this process fails and you 
 # find yourself coming back to the beginning of this guide, it seems initramfs really likes to hang around.
 # to erase a /dev media file system, quickie way: wipefs -a <target device i.e. /dev/sda1>, robust, complete wipe: cat /dev/zero | [wcs](https://github.com/chasem151/hotspot/blob/master/wcs.c) > *target device*
+sudo fdisk /dev/sda
+d
+1
+d
+2
+n
+1
+end-+7G
+t
+b
+n
+2
+end-+20G
+t
+83
+w
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda1 20G # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted
