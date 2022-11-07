@@ -1,51 +1,20 @@
 # Before inserting the micro SD into the pi, insert it into a Linux machine/VM with peripherals to 
-#encrypt the root partition (mine is sda bc my micro SD card adapter plugs in to my Linux machine over USB.. something about UART happening there. 
-#I coded USB transmission sofware circuits once I swear.
+encrypt the root partition (mine is sda bc my micro SD card adapter plugs in to my Linux machine over USB.. something about UART happening there. 
+I coded USB transmission sofware circuits once I swear.
 # MAKE SURE to ERASE the sd card/storage media and format as fat32, I use raspberry pi imager due to reliability of installs, balenaetcher is not
 # consistently functional. THEN, you can install the OS with desktop GUI (this is important if your storage media/this process fails and you 
 # find yourself coming back to the beginning of this guide, it seems initramfs really likes to hang around.
 # to erase a /dev media file system, quickie way: wipefs -a <target device i.e. /dev/sda1>, robust, complete wipe: cat /dev/zero | [wcs](https://github.com/chasem151/hotspot/blob/master/wcs.c) > *target device*
 ```
+# this phase of preparation involves connecting the micro SD/drive to a UNIX-capable system for flashing
 sudo su
-swapoff -a
-sudo umount /dev/sda1 && sudo umount /dev/sda2
-wipefs -a /dev/sda1 && wipefs -a /dev/sda2
-sudo e2fsck -f /dev/sda2
-sudo resize2fs /dev/sda2 20G 
-fdisk /dev/sda
-d 
-1
-p #print
-d
-2 
-p #print
-n
-p # primary
-1
-t #type
-b #fat32
-n
-2
-e #extended (ext4)
-t
-83 # linux
-
-# forces sys to check that memory is contiguous
-#fatresize -s 7G /dev/sda1
-# I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted (later problem)
-parted /dev/sda resizepart 1 7G
-parted /dev/sda resizepart 2 20G 
-mkfs.fat -F 32 /dev/sda1
-mkfs.ext4 /dev/sda2
-mount /dev/sda1
-# verification of the resize of partition slot 2
-resize2fs /dev/sda2  # may only work after reboot
-#sudo cat /dev/zero | ./wcs > /dev/sda1
-#sudo cat /dev/zero | ./wcs > /dev/sda2
-sudo lsblk # verify the drives have the amount of memory assigned to them
-gparted 
-# use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
-#make sure to save!@
+sudo umount /dev/sda2 # target root partition
+wipefs -a /dev/sda2 # WARNING: ONLY RUN IF ENCRYPTING THIS ROOT PARTITION FAILED AND YOU ARE RESTARTING HERE
+gparted # open application, make a new partition which is unformatted and the same size as the rootfs part
+sudo cfdisk /dev/sda # resize root partition sda2 to roughly 1/3 of the total space on disk, write, quit
+sudo e2fsck -f /dev/sda2 # checks for contiguous blks
+sudo resize2fs /dev/sda2 # resize to new size set in cfdisk
+# now, eject disk, insert into raspberry pi, boot pi
 sudo apt-get install cryptsetup lvm2 busybox rsync initramfs-tools gparted # dependecy programs
 sudo systemctl reboot
 cryptsetup luksFormat --type=luks2 --sector-size=4096 -c xchacha12,aes-adiantum-plain64 -s 256 -h sha512 --use-urandom /dev/mmcblk0p3 
