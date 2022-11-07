@@ -7,35 +7,37 @@
 # to erase a /dev media file system, quickie way: wipefs -a <target device i.e. /dev/sda1>, robust, complete wipe: cat /dev/zero | [wcs](https://github.com/chasem151/hotspot/blob/master/wcs.c) > *target device*
 ```
 sudo su
+wipefs -a /dev/sda*
+fdisk /dev/sda
+d 
+1
+p
+d
+2 
+p
+n
+1
+t
+b
+n
+2
+t
+83
+swapoff -a
 sudo umount /dev/sda1 && sudo umount /dev/sda2
 sudo e2fsck -f /dev/sda2 
 # forces sys to check that memory is contiguous
 sudo resize2fs /dev/sda2 20G 
+fatresize -s 7G /dev/sda1
 # I set 20GB bc of my 64GB total SD card, and bc we will clone the unencrypted data in slot 2 to slot 3 created in gparted (later problem)
+parted /dev/sda resizepart 1 7G
 parted /dev/sda resizepart 2 20G 
 # verification of the resize of partition slot 2
 resize2fs /dev/sda2
-sudo fdisk /dev/sda
-d
-1
-d
-2
-n
-1
-end-+7G
-t
-b
-p
-n
-2
-end-+20G
-t
-83
-p
-w
-sudo wipefs -a /dev/sda1 && sudo wipefs -a /dev/sda2
-sudo cat /dev/zero | ./wcs > /dev/sda1
-sudo cat /dev/zero | ./wcs > /dev/sda2
+mkfs.fat -F 32 /dev/sda1
+mkfs.ext4 /dev/sda2
+#sudo cat /dev/zero | ./wcs > /dev/sda1
+#sudo cat /dev/zero | ./wcs > /dev/sda2
 sudo lsblk # verify the drives have the amount of memory assigned to them
 gparted 
 # use the unallocated space to create a new unallocated partition of equal size to the rootfs partition (likely in slot 2--mmcblk0p2), 
