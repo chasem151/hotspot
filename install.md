@@ -37,6 +37,7 @@ parted /dev/sda resizepart 1 7G
 parted /dev/sda resizepart 2 20G 
 mkfs.fat -F 32 /dev/sda1
 mkfs.ext4 /dev/sda2
+mount /dev/sda1
 # verification of the resize of partition slot 2
 resize2fs /dev/sda2  # may only work after reboot
 #sudo cat /dev/zero | ./wcs > /dev/sda1
