@@ -2,7 +2,7 @@
  * Akin to dd_rescue's line positioning with 'optimal 
  * positioning' i.e. vt100 positioning.
  *
- * (c) Chase Maivald <chase1@bu.edu> 20***REMOVED***. Distributed under The GNU public license.
+ * (c) Chase Maivald <chase1@bu.edu> 2022. Distributed under The GNU public license.
  *
  * Compile into an executable via "cc -O3 -o wcs wcs.c"
  * Execute ./wcs via something like: cat /dev/zero | ./wcs > <target device> (erases drive thoroughly)

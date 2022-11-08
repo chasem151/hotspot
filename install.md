@@ -84,7 +84,7 @@ mv key.pub .ssh/ && cd .ssh
 cat key.pub >> authorized_keys # obfuscate the storage of the key file on the server
 rm -rf key.pub # delete og
 sudo nano /etc/ssh/sshd_config # all edited & uncommented parameters are as follows:
-Port xx # highly recommend uncommenting this and changing the port, bots scan the Internet for devices @port ***REMOVED***, bots used to be 82% of web traffic
+Port xx # highly recommend uncommenting this and changing the port, bots scan the Internet for devices @port 22, bots used to be 82% of web traffic
 PermitRootLogin no # nobody can elevate to root
 PubKeyAuthentication yes
 AuthorizedKeysFile      .ssh/authorized_keys .ssh/authorized_keys2 # leave as default, should just need to be uncommented
@@ -106,7 +106,7 @@ sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
 sudo echo $'interface=wlan0 \ndhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h\ndomain=wlan\naddress=/gw.wlan/192.168.4.1\n' > .etc/dnsmasq.conf
 # alias for the router
 sudo rfkill unblock wlan
-sudo echo $"interface=wlan0\ncountry_code=US\nssid=\nhw_mode=a\nchannel=153\nmacaddr_acl=0\nauth_algs=1\nignore_broadcast_ssid=0\nwpa=2\n***REMOVED***=\nwpa_key_mgmt=WPA-PSK\nwpa_pairwise=TKIP\nrsn_pairwise=CCMP' > /etc/hostapd/hostapd.conf
+sudo echo $"interface=wlan0\ncountry_code=US\nssid=\nhw_mode=a\nchannel=153\nmacaddr_acl=0\nauth_algs=1\nignore_broadcast_ssid=0\nwpa=2\nwpa_passphrase=\nwpa_key_mgmt=WPA-PSK\nwpa_pairwise=TKIP\nrsn_pairwise=CCMP' > /etc/hostapd/hostapd.conf
 sudo systemctl reboot
 sudo usermod -aG group username # I set the new group netdev for a superuser
 sudo echo $'[NetDev]\nName=br0\nKind=bridge\n' > /etc/systemd/network/bridge-br0.netdev
@@ -133,8 +133,8 @@ sudo service openvpn start # all ready
 sudo iptables -A FORWARD -i tun0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT && sudo iptables -A FORWARD -i eth0 -o tun0 -j ACCEPT
 sudo iptables -A FORWARD -i tun0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT && sudo iptables -A FORWARD -i wlan0 -o tun0 -j ACCEPT
 sudo iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
-sudo iptables -t nat -A PREROUTING -d DYNAMIC_DNS_IP -p tcp --dport ***REMOVED*** -j DNAT --to-dest /etc/openvpn/server.conf's_ip_addr:vpn_port_number
-sudo iptables -t nat -A POSTROUTING -d /etc/openvpn/server.conf's_ip_addr -p tcp --dport ***REMOVED*** -j SNAT --to-source etc/openvpn/server.conf's_ip_addr
+sudo iptables -t nat -A PREROUTING -d DYNAMIC_DNS_IP -p tcp --dport 51820 -j DNAT --to-dest /etc/openvpn/server.conf's_ip_addr:vpn_port_number
+sudo iptables -t nat -A POSTROUTING -d /etc/openvpn/server.conf's_ip_addr -p tcp --dport 51820 -j SNAT --to-source etc/openvpn/server.conf's_ip_addr
 sudo netfilter-persistent save && sudo netfilter-persistent reload # refresh settings to be present during/after every next boot
 cd /etc/init.d/ && sudo nano ./firewall.sh # triple down on firewall settings being present
 sudo iptables -t nat -A POSTROUTING -s /etc/openvpn/server.conf's_ip_addr/24 -o eth0 -j MASQUERADE
